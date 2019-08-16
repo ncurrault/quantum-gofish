@@ -84,7 +84,7 @@ class GameState:
         self.player_minimums[player][suit] = max(self.player_minimums[player][suit], n)
 
     def has_at_most(player, suit, n):
-        self.player_maximums[player][suit] = min(self.player_minimums[player][suit], n)
+        self.player_maximums[player][suit] = min(self.player_maximums[player][suit], n)
 
     def has_hand_size(player, n):
         self.hand_sizes[player] = n
