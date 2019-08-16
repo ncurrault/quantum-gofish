@@ -58,7 +58,69 @@ def handle_error(bot, update, error):
     except TelegramError:
         logging.getLogger(__name__).warning('TelegramError! %s caused by this update:\n%s', error, update)
 
-# TODO helpers
+class Player:
+    def __init__(self, id, nickname):
+        self.id = id
+        self.name = name
+
+    def set_nickname(self, name):
+        self.name = name
+
+    def get_markdown_tag(self):
+        return "[{}](tg://user?id={})".format(self.name, self.id)
+
+class GameState:
+    NUM_PER_SUIT = 4
+
+    def __init__(self, num_players):
+        # TODO will need to change if we want to support arbitrary joins in first round
+        self.num_players = num_players
+        self.player_minimums = [ [ 0 for _ in range(num_players) ] for _ in range(num_players) ]
+        self.player_maximums = [ [ num_players for _ in range(num_players) ] for _ in range(num_players) ]
+        self.hand_sizes = [ NUM_PER_SUIT for _ in range(num_players) ]
+
+    # TODO track the message that lets us know each thing so we can send "proof" of why a move is invalid
+    def has_at_least(player, suit, n):
+        self.player_minimums[player][suit] = max(self.player_minimums[player][suit], n)
+
+    def has_at_most(player, suit, n):
+        self.player_maximums[player][suit] = min(self.player_minimums[player][suit], n)
+
+    def has_hand_size(player, n):
+        self.hand_sizes[player] = n
+
+    def deduce_from_self():
+        # there are exactly NUM_PER_SUIT cards in every suit
+        for suit in range(self.num_players):
+            for player in range(self.num_players):
+                in_other_hands = 0
+                for other_player in range(self.num_players):
+                    if player == other_player:
+                        continue
+                    in_other_hands += self.player_minimums[other_player][suit]
+                self.has_at_most(player, suit, NUM_PER_SUIT - in_other_hands)
+
+        # each player has the number of cards that they have
+        # TODO
+
+    # external actions should call these, returning false if action is invalid
+
+    def asked_for(player, suit):
+        pass
+        # err if they must have 0
+
+    def gave_away(player, suit, n):
+        pass
+        # err if they must have < n or > n
+
+    def received(player, suit, n):
+        pass
+        # always successful?
+
+
+class Game:
+    pass # suit names, players, etc.
+
 
 def i_am_handler(bot, update, user_data=None):
     pass
