@@ -69,9 +69,8 @@ class Player:
     def get_markdown_tag(self):
         return "[{}](tg://user?id={})".format(self.name, self.id)
 
+NUM_PER_SUIT = 4
 class GameState:
-    NUM_PER_SUIT = 4
-
     def __init__(self, num_players):
         # TODO will need to change if we want to support arbitrary joins in first round
         self.num_players = num_players
@@ -97,7 +96,7 @@ class GameState:
         return n >= self.player_minimums[player][suit] and \
             n <= self.player_maximums[player][suit]
 
-    def deduce_extrema():
+    def deduce_extrema(self):
         # there are exactly NUM_PER_SUIT cards in every suit
         for suit in range(self.num_players):
             for player in range(self.num_players):
@@ -124,36 +123,69 @@ class GameState:
                 self.has_at_most(player, suit, self.hand_sizes[player] - num_known_cards)
                 self.has_at_least(player, suit, self.hand_sizes[player] - num_possible_cards)
 
-    def is_converged():
+    def is_converged(self):
         return self.player_maximums == self.player_minimums
 
-    def asked_for(player, suit):
+    def asked_for(self, player, suit):
         if not self.can_have(player, suit, 1):
             return False
 
         self.has_at_least(player, suit, 1)
+
         return True
 
-    def gave_away(player, suit, n):
+    def gave_away(self, player, suit, n):
         if not self.can_have(player, suit, n):
             return False
 
         self.has_hand_size(player, self.hand_sizes[player] - n)
         self.has_exactly(player, suit, 0)
 
-    def received(player, suit, n):
+        return True
+
+    def received(self, player, suit, n):
         self.has_hand_size(player, self.hand_sizes[player] + n)
         self.player_minimums[player][suit] += n
         self.player_maximums[player][suit] += n
+        self.has_at_most(player, suit, NUM_PER_SUIT)
 
+        return True
+
+    def test_action(self, source, target, suit, n):
+        print( self.asked_for(source, suit) and \
+            self.gave_away(target, suit, n) and \
+            self.received(source, suit, n) )
+        print()
+
+    def __str__(self):
+        return "Hand sizes[players]:  " + str(self.hand_sizes) + "\n" + \
+               "Mins[players][suits]: " + str(state.player_minimums) + "\n" + \
+               "Maxs[players][suits]: " + str(state.player_maximums)
 
 class Game:
     def __init__(self):
+        self.players = []
+        self.suit_names = []
+        self.started = False
 
-    pass # suit names, players, etc.
+    def player_join(self, player):
+        if self.started:
+            return "cannot join a game that has already started"
+        else:
+            self.players.append(player)
 
+    def player_leave(self, player):
+        if self.started:
+            return "cannot join a game that has already started"
+        elif player not in self.players:
+            return "it's not like you were playing..."
+        else:
+            self.players.remove(player)
 
-def i_am_handler(bot, update, user_data=None):
+    def game_start(self):
+        self.state = GameState(len(self.players))
+
+def i_am_handler(bot, update, user_data=None, args=[]):
     pass
 
 def list_player_handler(bot, update, chat_data=None):
