@@ -1,6 +1,6 @@
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
-    InlineQueryHandler
+    InlineQueryHandler, ParseMode
 from telegram.error import TelegramError
 
 import logging
@@ -57,17 +57,6 @@ def handle_error(bot, update, error):
         raise error
     except TelegramError:
         logging.getLogger(__name__).warning('TelegramError! %s caused by this update:\n%s', error, update)
-
-class Player:
-    def __init__(self, id, nickname):
-        self.id = id
-        self.name = name
-
-    def set_nickname(self, name):
-        self.name = name
-
-    def get_markdown_tag(self):
-        return "[{}](tg://user?id={})".format(self.name, self.id)
 
 NUM_PER_SUIT = 4
 class GameState:
@@ -162,6 +151,17 @@ class GameState:
                "Mins[players][suits]: " + str(state.player_minimums) + "\n" + \
                "Maxs[players][suits]: " + str(state.player_maximums)
 
+class Player:
+    def __init__(self, id, nickname):
+        self.id = id
+        self.name = name
+
+    def set_nickname(self, name):
+        self.name = name
+
+    def get_markdown_tag(self):
+        return "[{}](tg://user?id={})".format(self.name, self.id)
+
 class Game:
     def __init__(self):
         self.players = []
@@ -184,24 +184,100 @@ class Game:
 
     def game_start(self):
         self.state = GameState(len(self.players))
+        self.started = True
 
-def i_am_handler(bot, update, user_data=None, args=[]):
-    pass
+    def get_player(self, nickname_or_idx):
+        if nickname_or_idx.isdigit() and int(nickname_or_idx) < len(self.players):
+            return self.players[int(nickname_or_idx)]
+        for player in self.players:
+            if player.name == self.nickname:
+                return player
+
+    def get_player_md_tag(self, nickname_or_idx):
+        res = self.get_player(nickname_or_idx)
+        if res:
+            return res.get_markdown_tag()
+        else:
+            return None
+
+    def ask_for(self, player, target_str, suit):
+        target = self.get_player(target_str)
+        if not target:
+            return "cannot parse target user: " + target_str
+
+        # TODO finish
+
+
+def i_am_handler(bot, update, user_data=None, args=None):
+    if args:
+        nickname = " ".join(args)
+        if "player_obj" in user_data:
+            user_data["player_obj"].set_nickname(nickname)
+        else:
+            user_data["player_obj"] = Player(update.message.from_user.id, nickname)
+
+        update.message.reply_text("Successfully changed nickname to: " + nickname)
+    else:
+        update.message.reply_text("Nickname required")
 
 def list_player_handler(bot, update, chat_data=None):
-    pass
+    if "game_obj" in chat_data:
+        update.message.reply_text(chat_data["game_obj"].player_list())
+    else:
+        update.message.reply_text("No game exists in this chat")
 
-def whois_handler(bot, update, chat_data=None):
-    pass
+def whois_handler(bot, update, args=None, chat_data=None):
+    if "game_obj" not in chat_data:
+        update.message.reply_text("No game exists in this chat")
+    elif not args:
+        update.message.reply_text("usage: /whois [nickname or index]")
+    else:
+        nickname = " ".join(args)
+        res = chat_data["game_obj"].get_player_md_tag(nickname)
+        if res:
+            update.message.reply_text(res, parse_mode=ParseMode.MARKDOWN)
+        else:
+            update.message.reply_text("No player with nickname '{}'".format(nickname))
 
+
+# TODO shouldn't need... (see comment below)
 def join_handler(bot, update, user_data=None, chat_data=None):
-    pass
+    if "game_obj" in chat_data:
+        if "player_obj" not in user_data:
+            user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
+
+        player = user_data["player_obj"]
+        game = chat_data["game_obj"]
+        msg = game.player_join(player)
+        if msg:
+            update.message.reply_text(msg)
+        else:
+            update.message.reply_text("Welcome, {}! Current player count is {}.".format(player.name, len(game.players)))
+    else:
+        update.message.reply_text("No game exists in this chat")
 
 def leave_handler(bot, update, user_data=None, chat_data=None):
-    pass
+    if "game_obj" in chat_data:
+        if "player_obj" not in user_data:
+            user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
+
+        player = user_data["player_obj"]
+        game = chat_data["game_obj"]
+        msg = game.player_leave(player)
+        if msg:
+            update.message.reply_text(msg)
+        else:
+            update.message.reply_text("{} has left. Current player count is {}.".format(player.name, len(game.players)))
+    else:
+        update.message.reply_text("No game exists in this chat")
 
 def start_game_handler(bot, update, user_data=None, chat_data=None):
-    pass
+    if "game_obj" in chat_data:
+        chat_data["game_obj"].game_start()
+        update.message.reply_text("Game has started!")
+        # TODO whose turn is it
+    else:
+        update.message.reply_text("No game exists in this chat")
 
 
 def ask_handler(bot, update, user_data=None, chat_data=None, args=None):
@@ -221,16 +297,16 @@ if __name__ == "__main__":
     dispatcher.add_handler(get_static_handler("help"))
     dispatcher.add_handler(CommandHandler('feedback', feedback_handler, pass_args=True))
 
+    dispatcher.add_handler(CommandHandler('newgame', newgame_handler, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('listplayers', list_player_handler, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('whois', whois_handler, pass_args=True, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('iam', i_am_handler, pass_args=True, pass_user_data=True))
+
     # TODO these 2 commands shouldn't be necessary: you should be able to just start a game, then whoever asks first
     # is in it, as well as whoever they ask. but GameState currently does not support this
     dispatcher.add_handler(CommandHandler('joingame', join_handler, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('leavegame', leave_handler, pass_user_data=True, pass_chat_data=True))
-
     dispatcher.add_handler(CommandHandler('startgame', start_game_handler, pass_user_data=True, pass_chat_data=True))
-
-    dispatcher.add_handler(CommandHandler('listplayers', list_player_handler, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('whois', whois_handler, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('iam', i_am_handler, pass_user_data=True))
 
     dispatcher.add_handler(CommandHandler('ask', ask_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('ihave', have_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
