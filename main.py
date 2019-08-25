@@ -183,7 +183,8 @@ class Game:
             self.players.remove(player)
 
     def game_start(self):
-        self.state = GameState(len(self.players))
+        self.num_players = len(self.players)
+        self.state = GameState(self.num_players)
         self.started = True
 
     def get_player(self, nickname_or_idx):
@@ -202,10 +203,23 @@ class Game:
 
     def ask_for(self, player, target_str, suit):
         target = self.get_player(target_str)
-        if not target:
+        if target:
+            target_idx = self.players.index(target)
+        else:
             return "cannot parse target user: " + target_str
 
-        # TODO finish
+        if suit in suits:
+            suit_idx = suits.index(suit)
+        else:
+            if len(suits) == self.num_players:
+                return ""
+            suit_idx = len(suits)
+            suits.append(suit)
+
+        if not self.state.asked_for(target_idx, suit_idx):
+            return "error: game state indicates that {} has at least one {} with probability zero".format(player.name, suit)
+
+        self.status = None # TODO store who was asked, so only they can answer
 
 
 def i_am_handler(bot, update, user_data=None, args=None):
