@@ -60,6 +60,12 @@ def handle_error(bot, update, error):
 
 NUM_PER_SUIT = 4
 class GameState:
+    """
+    Class for tracking the state of a game. That is, given n players
+    (referred to by indices 0 to n-1) and n suits (also 0 to n-1), learn data
+    about what players may or may not have.
+    """
+
     def __init__(self, num_players):
         # TODO will need to change if we want to support arbitrary joins in first round
         self.num_players = num_players
@@ -82,10 +88,22 @@ class GameState:
         self.hand_sizes[player] = n
 
     def can_have(self, player, suit, n):
+        """
+        Check if 'player' can have 'n' cards of suit 'suit'
+        """
         return n >= self.player_minimums[player][suit] and \
             n <= self.player_maximums[player][suit]
 
     def deduce_extrema(self):
+        """
+        From all current extrema, deduce stricter extrema from the principles
+        of the game: there are NUM_PER_SUIT cards of each suit and each players
+        hand consists of cards from the suits.
+        """
+
+        # TODO should we apply this function until we hit a fixed point
+        # instead of just applying once each turn?
+
         # there are exactly NUM_PER_SUIT cards in every suit
         for suit in range(self.num_players):
             for player in range(self.num_players):
@@ -116,6 +134,15 @@ class GameState:
         return self.player_maximums == self.player_minimums
 
     def asked_for(self, player, suit):
+        """
+        Note that some player 'player' has asked another for the suit 'suit'.
+        If this is impossible (it is known that 'player' has no 'suit's), returns
+        False and does nothing.
+
+        If it is possible, returns True and internally notes that the player
+        has at least 1 card of suit 'suit'.
+        """
+
         if not self.can_have(player, suit, 1):
             return False
 
@@ -124,6 +151,17 @@ class GameState:
         return True
 
     def gave_away(self, player, suit, n):
+        """
+        Note that some player 'player' has given away exacly 'n' cards with suit
+        'suit'.
+
+        If this is impossible (it is known that 'player' has more or less than n
+        'suit's), returns False and does nothing.
+
+        If it is possible, returns True and internally notes that the player
+        has given away 'n' 'suit's
+        """
+
         if not self.can_have(player, suit, n):
             return False
 
@@ -133,6 +171,11 @@ class GameState:
         return True
 
     def received(self, player, suit, n):
+        """
+        Notes that 'player' has received 'n' cards of suit 'suit'. This action
+        cannot fail. Returns True.
+        """
+
         self.has_hand_size(player, self.hand_sizes[player] + n)
         self.player_minimums[player][suit] += n
         self.player_maximums[player][suit] += n
@@ -152,6 +195,10 @@ class GameState:
                "Maxs[players][suits]: " + str(state.player_maximums)
 
 class Player:
+    """
+    Helper class for representing a Telegram user,
+    allowing them to set a nickname, and tag them in a Markdown-encoded message.
+    """
     def __init__(self, id, nickname):
         self.id = id
         self.name = name
@@ -163,6 +210,11 @@ class Player:
         return "[{}](tg://user?id={})".format(self.name, self.id)
 
 class Game:
+    """
+    Represents a game of Quantum Go Fish. Maintains a GameState representing the
+    current state of the game, and a list of players and suit names with indices
+    corresponding to the GameState.
+    """
     def __init__(self):
         self.players = []
         self.suit_names = []
@@ -188,6 +240,13 @@ class Game:
         self.started = True
 
     def get_player(self, nickname_or_idx):
+        """
+        Get a Player object of a player in this game given 'nickname_or_idx', a
+        string that another user might use to refer to them
+        (their index in the turn order or their nickname).
+
+        Returns None if no player with that index/nickname exists.
+        """
         if nickname_or_idx.isdigit() and int(nickname_or_idx) < len(self.players):
             return self.players[int(nickname_or_idx)]
         for player in self.players:
@@ -195,6 +254,12 @@ class Game:
                 return player
 
     def get_player_md_tag(self, nickname_or_idx):
+        """
+        Wrapper for get_player that returns either the Markdown tag of the
+        player referred to by 'nickname_or_idx' or None if the player could not
+        be identified.
+        """
+
         res = self.get_player(nickname_or_idx)
         if res:
             return res.get_markdown_tag()
@@ -221,6 +286,8 @@ class Game:
 
         self.status = None # TODO store who was asked, so only they can answer
 
+
+# Telegram handlers for inquiries about players/nicknames
 
 def i_am_handler(bot, update, user_data=None, args=None):
     if args:
@@ -253,7 +320,7 @@ def whois_handler(bot, update, args=None, chat_data=None):
         else:
             update.message.reply_text("No player with nickname '{}'".format(nickname))
 
-
+# Telegram handlers for game management actions (joining/leaving the lobby, starting)
 # TODO shouldn't need... (see comment below)
 def join_handler(bot, update, user_data=None, chat_data=None):
     if "game_obj" in chat_data:
@@ -293,12 +360,14 @@ def start_game_handler(bot, update, user_data=None, chat_data=None):
     else:
         update.message.reply_text("No game exists in this chat")
 
+# Telegram handlers for in-game actions: asking another user for something,
+# responding with how many you have, or /go fish (equivalent to "/ihave 0")
 
 def ask_handler(bot, update, user_data=None, chat_data=None, args=None):
-    pass
+    pass # TODO
 
 def have_handler(bot, update, user_data=None, chat_data=None, args=None):
-    pass
+    pass # TODO
 
 def go_fish_handler(bot, update, user_data=None, chat_data=None):
     have_handler(bot, update, user_data=user_data, chat_data=chat_data,
