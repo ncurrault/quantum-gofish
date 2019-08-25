@@ -209,6 +209,12 @@ class Player:
     def get_markdown_tag(self):
         return "[{}](tg://user?id={})".format(self.name, self.id)
 
+class GameStatus(Enum):
+    GAME_NOT_STARTED = 0
+    AWAITING_ASK = 1
+    AWAITING_RESPONSE = 2
+    GAME_OVER = 3
+
 class Game:
     """
     Represents a game of Quantum Go Fish. Maintains a GameState representing the
@@ -219,6 +225,7 @@ class Game:
         self.players = []
         self.suit_names = []
         self.started = False
+        self.status = GameStatus.GAME_NOT_STARTED
 
     def player_join(self, player):
         if self.started:
@@ -238,6 +245,10 @@ class Game:
         self.num_players = len(self.players)
         self.state = GameState(self.num_players)
         self.started = True
+        # TODO shuffle players?
+
+        self.status = GameStatus.AWAITING_ASK
+        self.asking_player_idx = 0
 
     def get_player(self, nickname_or_idx):
         """
@@ -267,6 +278,9 @@ class Game:
             return None
 
     def ask_for(self, player, target_str, suit):
+        if self.status != GameStatus.AWAITING_ASK:
+            return "/ask unexpected"
+
         target = self.get_player(target_str)
         if target:
             target_idx = self.players.index(target)
@@ -277,14 +291,38 @@ class Game:
             suit_idx = suits.index(suit)
         else:
             if len(suits) == self.num_players:
-                return ""
+                return "could not parse suit name: " + suit
             suit_idx = len(suits)
             suits.append(suit)
 
         if not self.state.asked_for(target_idx, suit_idx):
-            return "error: game state indicates that {} has at least one {} with probability zero".format(player.name, suit)
+            return "error: game state indicates that {} has at least one \"{}\" with probability zero".format(player.name, suit)
 
-        self.status = None # TODO store who was asked, so only they can answer
+        self.status = GameStatus.AWAITING_RESPONSE
+        self.requested_suit_idx = suit_idx
+        self.target_player = target
+
+    def respond_to_request(self, player, n_str):
+        if self.status != GameStatus.AWAITING_RESPONSE:
+            return "/ihave unexpected"
+
+        if n_str.isdigit():
+            n = int(n_str)
+        else:
+            return "cannot parse number of cards: " + n_str
+
+        if player == self.target_player:
+            player_idx = self.players.index(player)
+        else:
+            return "expected \"/ihave [n]\" from {}, not {}".format(self.target_player.name, player.name)
+
+        if self.state.gave_away(player_idx, self.requested_suit_idx, n):
+            self.state.received(self.asking_player_idx, self.requested_suit_idx, n)
+        else:
+            return "error: game state indicates that {} has {} \"{}\" with probability zero".format(player.name, n, suit)
+
+        self.status = GameStatus.AWAITING_ASK
+        self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
 
 
 # Telegram handlers for inquiries about players/nicknames
