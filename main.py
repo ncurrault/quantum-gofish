@@ -30,7 +30,7 @@ def get_static_handler(command):
         bot.send_message(chat_id=update.message.chat.id, text=response) ) )
 
 # Credit: https://github.com/CaKEandLies/Telegram_Cthulhu/blob/master/cthulhu_game_bot.py#L63
-def feedback_handler(bot, update, args=None):
+def feedback_handler(bot, update, args):
     """
     Store feedback from users in a text file.
     """
@@ -325,9 +325,13 @@ class Game:
         self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
 
 
+def newgame_handler(bot, update, chat_data):
+    chat_data["game_obj"] = Game()
+    update.message.reply_text("Started new Quantum Go Fish game! /joingame to join")
+
 # Telegram handlers for inquiries about players/nicknames
 
-def i_am_handler(bot, update, user_data=None, args=None):
+def i_am_handler(bot, update, user_data, args):
     if args:
         nickname = " ".join(args)
         if "player_obj" in user_data:
@@ -339,13 +343,13 @@ def i_am_handler(bot, update, user_data=None, args=None):
     else:
         update.message.reply_text("Nickname required")
 
-def list_player_handler(bot, update, chat_data=None):
+def list_player_handler(bot, update, chat_data):
     if "game_obj" in chat_data:
         update.message.reply_text(chat_data["game_obj"].player_list())
     else:
         update.message.reply_text("No game exists in this chat")
 
-def whois_handler(bot, update, args=None, chat_data=None):
+def whois_handler(bot, update, args, chat_data):
     if "game_obj" not in chat_data:
         update.message.reply_text("No game exists in this chat")
     elif not args:
@@ -360,7 +364,7 @@ def whois_handler(bot, update, args=None, chat_data=None):
 
 # Telegram handlers for game management actions (joining/leaving the lobby, starting)
 # TODO shouldn't need... (see comment below)
-def join_handler(bot, update, user_data=None, chat_data=None):
+def join_handler(bot, update, user_data, chat_data):
     if "game_obj" in chat_data:
         if "player_obj" not in user_data:
             user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
@@ -375,7 +379,7 @@ def join_handler(bot, update, user_data=None, chat_data=None):
     else:
         update.message.reply_text("No game exists in this chat")
 
-def leave_handler(bot, update, user_data=None, chat_data=None):
+def leave_handler(bot, update, user_data, chat_data):
     if "game_obj" in chat_data:
         if "player_obj" not in user_data:
             user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
@@ -390,7 +394,7 @@ def leave_handler(bot, update, user_data=None, chat_data=None):
     else:
         update.message.reply_text("No game exists in this chat")
 
-def start_game_handler(bot, update, user_data=None, chat_data=None):
+def start_game_handler(bot, update, chat_data):
     if "game_obj" in chat_data:
         chat_data["game_obj"].game_start()
         update.message.reply_text("Game has started!")
@@ -401,13 +405,13 @@ def start_game_handler(bot, update, user_data=None, chat_data=None):
 # Telegram handlers for in-game actions: asking another user for something,
 # responding with how many you have, or /go fish (equivalent to "/ihave 0")
 
-def ask_handler(bot, update, user_data=None, chat_data=None, args=None):
+def ask_handler(bot, update, user_data, chat_data, args):
     pass # TODO
 
-def have_handler(bot, update, user_data=None, chat_data=None, args=None):
+def have_handler(bot, update, user_data, chat_data, args):
     pass # TODO
 
-def go_fish_handler(bot, update, user_data=None, chat_data=None):
+def go_fish_handler(bot, update, user_data, chat_data):
     have_handler(bot, update, user_data=user_data, chat_data=chat_data,
         args=["0"])
 
@@ -427,7 +431,7 @@ if __name__ == "__main__":
     # is in it, as well as whoever they ask. but GameState currently does not support this
     dispatcher.add_handler(CommandHandler('joingame', join_handler, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('leavegame', leave_handler, pass_user_data=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('startgame', start_game_handler, pass_user_data=True, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('startgame', start_game_handler, pass_chat_data=True))
 
     dispatcher.add_handler(CommandHandler('ask', ask_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('ihave', have_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
