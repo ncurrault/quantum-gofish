@@ -1,0 +1,12 @@
+help - get help, including a list of commands
+feedback - give feedback
+newgame - start a new game in the current chat
+listplayers - list players who have joined the game
+whois - tag a player
+iam - set your nickname
+joingame - join a game in the current chat
+leavegame - leave a game in the current chat
+startgame - start a pending game
+ask - ask another player for some suit
+ihave - respond to a request with how many you have
+gofish - respond to a request with "go fish"

@@ -1,1 +1,31 @@
-TODO /help response
+Welcome to Quantum Go Fish! This bot facilitates games of Quantum Go Fish in Telegram chats. To get started, add me to a chat and send /newgame.
+
+Then, users in that chat can join with /joingame. Players can leave with /leavegame. When the list of players is settled, anyone can send /startgame to start the game.
+
+At this point, the bot will take a request of the form "/ask [player nickname or index] [suit name]". Then it will expect a response from the indicated player of the form "/ihave [number]" or "/gofish" (/gofish is equivalent to "/ihave 0").
+
+The bot will indicate if an action is invalid with what is known so far. Otherwise, it will update the game state according to the data observed in the turn and proceed to the next player.
+
+Command list:
+
+AT ANY TIME
+help - get help, including a list of commands
+feedback - give feedback
+
+DURING OR BEFORE A GAME
+listplayers - list players who have joined the game
+whois - tag a player
+iam - set your nickname
+
+PREPARING A GAME
+newgame - start a new game in the current chat
+joingame - join a game in the current chat
+leavegame - leave a game in the current chat
+startgame - start a pending game
+
+PLAYING A GAME
+ask - ask another player for some suit
+ihave - respond to a request with how many you have
+gofish - respond to a request with "go fish"
+
+
