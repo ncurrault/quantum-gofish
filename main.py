@@ -406,10 +406,33 @@ def start_game_handler(bot, update, chat_data):
 # responding with how many you have, or /go fish (equivalent to "/ihave 0")
 
 def ask_handler(bot, update, user_data, chat_data, args):
-    pass # TODO
+    if len(args) < 2:
+        update.message.reply_text("syntax: /ask [user] [suit name]")
+    elif "game_obj" not in chat_data:
+        update.message.reply_text("No game exists in this chat")
+    elif "player_obj" not in user_data or user_data["player_obj"] not in chat_data["game_obj"].players:
+        update.message.reply_text("It doesn't look like you're in this game")
+    else:
+        response = chat_data["game_obj"].ask_for(user_data["player_obj"], args[0], " ".join(args[1:]))
+        # TODO require one-word nicknames
+
+        if response:
+            update.message.reply_text(response)
+        # TODO also reply indicating success
+
 
 def have_handler(bot, update, user_data, chat_data, args):
-    pass # TODO
+    if len(args) != 1:
+        update.message.reply_text("syntax: /ihave [number]")
+    elif "game_obj" not in chat_data:
+        update.message.reply_text("No game exists in this chat")
+    elif "player_obj" not in user_data or user_data["player_obj"] not in chat_data["game_obj"].players:
+        update.message.reply_text("It doesn't look like you're in this game")
+    else:
+        response = chat_data["game_obj"].respond_to_request(user_data["player_obj"], args[0])
+        if response:
+            update.message.reply_text(response)
+        # TODO also reply indicating success
 
 def go_fish_handler(bot, update, user_data, chat_data):
     have_handler(bot, update, user_data=user_data, chat_data=chat_data,
