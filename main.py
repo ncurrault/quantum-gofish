@@ -102,6 +102,8 @@ class Game:
     def player_join(self, player):
         if self.started:
             return "cannot join a game that has already started"
+        elif player in self.players:
+            return "You're already in this game!"
         else:
             self.players.append(player)
 
