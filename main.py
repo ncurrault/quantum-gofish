@@ -1,6 +1,6 @@
 import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
-    InlineQueryHandler, ParseMode
+    InlineQueryHandler
 from telegram.error import TelegramError
 
 import logging
@@ -201,7 +201,7 @@ class Player:
     """
     def __init__(self, id, nickname):
         self.id = id
-        self.name = name
+        self.name = nickname
 
     def set_nickname(self, name):
         self.name = name
@@ -226,6 +226,11 @@ class Game:
         self.suit_names = []
         self.started = False
         self.status = GameStatus.GAME_NOT_STARTED
+
+        self.asking_player_idx = None
+        self.requested_suit_idx = None
+        self.target_player = None
+        self.target_player_idx = None
 
     def player_join(self, player):
         if self.started:
@@ -326,15 +331,15 @@ class Game:
         self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
 
     def player_list(self):
-        res = ""
-        for i in range(self.num_players):
+        res = "List of players:\n"
+        for i, player in enumerate(self.players):
             if i == self.asking_player_idx:
                 prefix = "(Q) "
             elif i == self.target_player_idx and self.status == GameStatus.AWAITING_RESPONSE:
                 prefix = "(A) "
             else:
                 prefix = ""
-            res += prefix + self.players[i].name
+            res += prefix + player.name + "\n"
         return res
 
 def newgame_handler(bot, update, chat_data):
@@ -370,7 +375,7 @@ def whois_handler(bot, update, args, chat_data):
         nickname = " ".join(args)
         res = chat_data["game_obj"].get_player_md_tag(nickname)
         if res:
-            update.message.reply_text(res, parse_mode=ParseMode.MARKDOWN)
+            update.message.reply_text(res, parse_mode=telegram.ParseMode.MARKDOWN)
         else:
             update.message.reply_text("No player with nickname '{}'".format(nickname))
 
