@@ -221,7 +221,8 @@ class Game:
                 prefix = "(A) "
             else:
                 prefix = ""
-            res += prefix + player.name + "\n"
+
+            res += "{} ({} cards)\n".format(prefix + player.name, self.state.hand_sizes[i])
         return res
 
     def send_blame(self, bot, chat_id):
