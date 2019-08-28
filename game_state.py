@@ -86,6 +86,9 @@ class GameState:
         If it is possible, returns True and internally notes that the player
         has at least 1 card of suit 'suit'.
         """
+        print(self)
+        print("asked for", player, suit)
+        print()
 
         if not self.can_have(player, suit, 1):
             return False
@@ -105,6 +108,9 @@ class GameState:
         If it is possible, returns True and internally notes that the player
         has given away 'n' 'suit's
         """
+        print(self)
+        print("gave away", player, suit, n)
+        print()
 
         if not self.can_have(player, suit, n):
             return False
@@ -119,6 +125,9 @@ class GameState:
         Notes that 'player' has received 'n' cards of suit 'suit'. This action
         cannot fail. Returns True.
         """
+        print(self)
+        print("received", player, suit, n)
+        print()
 
         self.has_hand_size(player, self.hand_sizes[player] + n)
         self.player_minimums[player][suit] += n
