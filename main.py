@@ -301,6 +301,7 @@ class Game:
         self.status = GameStatus.AWAITING_RESPONSE
         self.requested_suit_idx = suit_idx
         self.target_player = target
+        self.target_player_idx = target_idx
 
     def respond_to_request(self, player, n_str):
         if self.status != GameStatus.AWAITING_RESPONSE:
@@ -324,6 +325,17 @@ class Game:
         self.status = GameStatus.AWAITING_ASK
         self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
 
+    def player_list(self):
+        res = ""
+        for i in range(self.num_players):
+            if i == self.asking_player_idx:
+                prefix = "(Q) "
+            elif i == self.target_player_idx and self.status == GameStatus.AWAITING_RESPONSE:
+                prefix = "(A) "
+            else:
+                prefix = ""
+            res += prefix + self.players[i].name
+        return res
 
 def newgame_handler(bot, update, chat_data):
     chat_data["game_obj"] = Game()
