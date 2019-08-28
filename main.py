@@ -100,10 +100,14 @@ class GameState:
         of the game: there are NUM_PER_SUIT cards of each suit and each players
         hand consists of cards from the suits.
         """
+        previous = None
+        current = self.player_minimums + self.player_maximums
+        while previous != current:
+            previous = current
+            self._deduce_extrema_step()
+            current = self.player_minimums + self.player_maximums
 
-        # TODO should we apply this function until we hit a fixed point
-        # instead of just applying once each turn?
-
+    def _deduce_extrema_step(self):
         # there are exactly NUM_PER_SUIT cards in every suit
         for suit in range(self.num_players):
             for player in range(self.num_players):
@@ -250,10 +254,11 @@ class Game:
         self.num_players = len(self.players)
         self.state = GameState(self.num_players)
         self.started = True
-        # TODO shuffle players?
 
+        random.shuffle(self.players)
         self.status = GameStatus.AWAITING_ASK
         self.asking_player_idx = 0
+        self.asking_player = self.players[0]
 
     def get_player(self, nickname_or_idx):
         """
@@ -303,10 +308,16 @@ class Game:
         if not self.state.asked_for(target_idx, suit_idx):
             return "error: game state indicates that {} has at least one \"{}\" with probability zero".format(player.name, suit)
 
-        self.status = GameStatus.AWAITING_RESPONSE
-        self.requested_suit_idx = suit_idx
-        self.target_player = target
-        self.target_player_idx = target_idx
+        self.state.deduce_extrema()
+        if self.state.is_converged():
+            self.winner = player
+            self.status = GameStatus.GAME_OVER
+        else:
+            self.status = GameStatus.AWAITING_RESPONSE
+            self.requested_suit = suit
+            self.requested_suit_idx = suit_idx
+            self.target_player = target
+            self.target_player_idx = target_idx
 
     def respond_to_request(self, player, n_str):
         if self.status != GameStatus.AWAITING_RESPONSE:
@@ -327,8 +338,14 @@ class Game:
         else:
             return "error: game state indicates that {} has {} \"{}\" with probability zero".format(player.name, n, suit)
 
-        self.status = GameStatus.AWAITING_ASK
-        self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
+        self.state.deduce_extrema()
+        if self.state.is_converged():
+            self.winner = player
+            self.status = GameStatus.GAME_OVER
+        else:
+            self.status = GameStatus.AWAITING_ASK
+            self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
+            self.asking_player = self.players[self.asking_player_idx]
 
     def player_list(self):
         res = "List of players:\n"
@@ -342,6 +359,23 @@ class Game:
             res += prefix + player.name + "\n"
         return res
 
+    def send_blame(self, bot, chat_id):
+        if self.status == GameStatus.AWAITING_ASK:
+            msg = "It's {}'s turn!".format(self.asking_player.get_markdown_tag())
+        elif self.status == GameStatus.AWAITING_RESPONSE:
+            msg = '{}: "{}, do you have any {}?"'.format(
+                self.asking_player.name,
+                self.target_player.get_markdown_tag(),
+                self.requested_suit
+            )
+        elif self.status == GameStatus.GAME_NOT_STARTED:
+            msg = "Waiting on anyone to start the game"
+        else:
+            msg = "Game is over. Congratulations, {}!".format(self.winner.name)
+            # TODO show what the converged state was
+
+        bot.send_message(chat_id=chat_id, text=msg, parse_mode=telegram.ParseMode.MARKDOWN)
+
 def newgame_handler(bot, update, chat_data):
     chat_data["game_obj"] = Game()
     update.message.reply_text("Started new Quantum Go Fish game! /joingame to join")
@@ -350,7 +384,7 @@ def newgame_handler(bot, update, chat_data):
 
 def i_am_handler(bot, update, user_data, args):
     if args:
-        nickname = " ".join(args)
+        nickname = args[0]
         if "player_obj" in user_data:
             user_data["player_obj"].set_nickname(nickname)
         else:
@@ -414,8 +448,7 @@ def leave_handler(bot, update, user_data, chat_data):
 def start_game_handler(bot, update, chat_data):
     if "game_obj" in chat_data:
         chat_data["game_obj"].game_start()
-        update.message.reply_text("Game has started!")
-        # TODO whose turn is it
+        chat_data["game_obj"].send_blame(bot, update.message.chat_id)
     else:
         update.message.reply_text("No game exists in this chat")
 
@@ -431,11 +464,11 @@ def ask_handler(bot, update, user_data, chat_data, args):
         update.message.reply_text("It doesn't look like you're in this game")
     else:
         response = chat_data["game_obj"].ask_for(user_data["player_obj"], args[0], " ".join(args[1:]))
-        # TODO require one-word nicknames
 
         if response:
             update.message.reply_text(response)
-        # TODO also reply indicating success
+        else:
+            chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
 
 def have_handler(bot, update, user_data, chat_data, args):
@@ -449,7 +482,8 @@ def have_handler(bot, update, user_data, chat_data, args):
         response = chat_data["game_obj"].respond_to_request(user_data["player_obj"], args[0])
         if response:
             update.message.reply_text(response)
-        # TODO also reply indicating success
+        else:
+            chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
 def go_fish_handler(bot, update, user_data, chat_data):
     have_handler(bot, update, user_data=user_data, chat_data=chat_data,
