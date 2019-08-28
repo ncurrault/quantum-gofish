@@ -144,8 +144,8 @@ class GameState:
 
     def __str__(self):
         return "Hand sizes[players]:  " + str(self.hand_sizes) + "\n" + \
-               "Mins[players][suits]: " + str(state.player_minimums) + "\n" + \
-               "Maxs[players][suits]: " + str(state.player_maximums)
+               "Mins[players][suits]: " + str(self.player_minimums) + "\n" + \
+               "Maxs[players][suits]: " + str(self.player_maximums)
 
 if __name__ == "__main__":
     state = GameState(3)
