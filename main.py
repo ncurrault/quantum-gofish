@@ -219,19 +219,19 @@ class Game:
     def player_list(self):
         res = "List of players:\n"
         for i, player in enumerate(self.players):
+            res += str(i) + ". "
+            res += player.name + " "
+
+            if self.status != GameStatus.GAME_NOT_STARTED:
+                res += "({} cards)".format(self.state.hand_sizes[i])
+
             if i == self.asking_player_idx:
-                prefix = "(Q) "
+                res += " (Q)"
             elif i == self.target_player_idx and self.status == GameStatus.AWAITING_RESPONSE:
-                prefix = "(A) "
-            else:
-                prefix = ""
+                res += " (A)"
 
-            if self.status == GameStatus.GAME_NOT_STARTED:
-                suffix = "\n"
-            else:
-                suffix = " ({} cards)\n".format(self.state.hand_sizes[i])
+            res += "\n"
 
-            res += prefix + player.name + suffix
         return res
 
     def send_blame(self, bot, chat_id):
