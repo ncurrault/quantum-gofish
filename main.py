@@ -247,8 +247,12 @@ class Game:
         elif self.status == GameStatus.GAME_NOT_STARTED:
             msg = "Waiting on anyone to start the game"
         else:
-            msg = "Game is over. Congratulations, {}!".format(self.winner.name)
-            # TODO show what the converged state was
+            msg = "Game is over. Congratulations, {}!\n\nFinal game state:\n".format(self.winner.name)
+            for player_idx, player in enumerate(self.players):
+                msg += player.name + ": "
+                for suit_idx, suit in enumerate(self.suit_names):
+                    msg += "{} {} ".format(self.state.player_minimums[player_idx][suit_idx], suit)
+                msg += "\n"
 
         bot.send_message(chat_id=chat_id, text=msg, parse_mode=telegram.ParseMode.MARKDOWN)
 
