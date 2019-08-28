@@ -38,7 +38,7 @@ def feedback_handler(bot, update, args):
     Store feedback from users in a text file.
     """
     if args and len(args) > 0:
-        feedback = open("data/feedback.txt", "a")
+        feedback = open("ignore/feedback.txt", "a")
         feedback.write("\n")
         feedback.write(update.message.from_user.first_name)
         feedback.write("\n")
@@ -154,6 +154,7 @@ class Game:
         if self.status != GameStatus.AWAITING_ASK:
             return "/ask unexpected"
 
+        player_idx = self.players.index(player)
         target = self.get_player(target_str)
         if target:
             target_idx = self.players.index(target)
@@ -169,7 +170,7 @@ class Game:
             suit_idx = len(self.suit_names)
             self.suit_names.append(suit)
 
-        if not self.state.asked_for(target_idx, suit_idx):
+        if not self.state.asked_for(player_idx, suit_idx):
             return "error: game state indicates that {} has at least one \"{}\" with probability zero".format(player.name, suit)
 
         self.state.deduce_extrema()
