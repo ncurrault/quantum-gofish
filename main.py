@@ -226,7 +226,12 @@ class Game:
             else:
                 prefix = ""
 
-            res += "{} ({} cards)\n".format(prefix + player.name, self.state.hand_sizes[i])
+            if self.status == GameStatus.GAME_NOT_STARTED:
+                suffix = "\n"
+            else:
+                suffix = " ({} cards)\n".format(self.state.hand_sizes[i])
+
+            res += prefix + player.name + suffix
         return res
 
     def send_blame(self, bot, chat_id):
