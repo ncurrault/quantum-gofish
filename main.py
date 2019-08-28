@@ -163,6 +163,9 @@ class Game:
         else:
             return "cannot parse target user: " + target_str
 
+        if player == target:
+            return "Players cannot ask themselves for cards. Please ask another player."
+
         if suit in self.suit_names:
             suit_idx = self.suit_names.index(suit)
         else:
