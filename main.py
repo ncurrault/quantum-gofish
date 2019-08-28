@@ -173,7 +173,7 @@ class Game:
             self.suit_names.append(suit)
 
         if not self.state.asked_for(player_idx, suit_idx):
-            return "error: game state indicates that {} has at least one \"{}\" with probability zero".format(player.name, suit)
+            return "error: game state indicates that {} has at least one {} with probability zero".format(player.name, suit)
 
         self.state.deduce_extrema()
         if self.state.is_converged():
