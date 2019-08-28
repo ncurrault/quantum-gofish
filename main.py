@@ -209,8 +209,12 @@ class Game:
             self.status = GameStatus.GAME_OVER
         else:
             self.status = GameStatus.AWAITING_ASK
-            self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
-            self.asking_player = self.players[self.asking_player_idx]
+            while True:
+                self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
+                self.asking_player = self.players[self.asking_player_idx]
+
+                if self.state.hand_sizes[self.asking_player_idx] > 0:
+                    break # find the next player with a nonempty hand
 
     def player_list(self):
         res = "List of players:\n"
