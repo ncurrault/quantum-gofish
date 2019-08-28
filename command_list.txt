@@ -10,3 +10,4 @@ startgame - start a pending game
 ask - ask another player for some suit
 ihave - respond to a request with how many you have
 gofish - respond to a request with "go fish"
+blame - reveal who's holding up the game

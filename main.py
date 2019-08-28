@@ -489,6 +489,12 @@ def go_fish_handler(bot, update, user_data, chat_data):
     have_handler(bot, update, user_data=user_data, chat_data=chat_data,
         args=["0"])
 
+def blame_handler(bot, update, chat_data):
+    if "game_obj" in chat_data:
+        chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+    else:
+        update.message.reply_text("No game exists in this chat")
+
 if __name__ == "__main__":
     updater = Updater(token=API_TOKEN)
     dispatcher = updater.dispatcher
@@ -510,6 +516,8 @@ if __name__ == "__main__":
     dispatcher.add_handler(CommandHandler('ask', ask_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('ihave', have_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
     dispatcher.add_handler(CommandHandler('gofish', go_fish_handler, pass_user_data=True, pass_chat_data=True))
+
+    dispatcher.add_handler(CommandHandler('blame', blame_handler, pass_chat_data=True))
 
     dispatcher.add_error_handler(handle_error)
 
