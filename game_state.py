@@ -17,7 +17,7 @@ class GameState:
         # TODO will need to change if we want to support arbitrary joins in first round
         self.num_players = num_players
         self.player_minimums = [ [ 0 for _ in range(num_players) ] for _ in range(num_players) ]
-        self.player_maximums = [ [ num_players for _ in range(num_players) ] for _ in range(num_players) ]
+        self.player_maximums = [ [ NUM_PER_SUIT for _ in range(num_players) ] for _ in range(num_players) ]
         self.hand_sizes = [ NUM_PER_SUIT for _ in range(num_players) ]
         self.last_actor = None
 
