@@ -169,7 +169,7 @@ class Game:
         if suit in self.suit_names:
             suit_idx = self.suit_names.index(suit)
         else:
-            logging.debug("new suit: " + suit)
+            logging.info("new suit: " + suit)
             if len(self.suit_names) == self.num_players:
                 return "could not parse suit name: " + suit
             suit_idx = len(self.suit_names)
@@ -413,7 +413,7 @@ if __name__ == "__main__":
     logging.basicConfig(
         filename="ignore/bot.log",
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
-        level=logging.DEBUG)
+        level=logging.INFO)
 
     updater.start_polling()
     updater.idle()

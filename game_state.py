@@ -91,7 +91,7 @@ class GameState:
         If it is possible, returns True and internally notes that the player
         has at least 1 card of suit 'suit'.
         """
-        logging.debug("player action: {} asked for {}.\n{}".format(player, suit, self))
+        logging.info("player action: {} asked for {}.\n{}".format(player, suit, self))
         self.last_actor = player
 
         if not self.can_have(player, suit, 1):
@@ -112,7 +112,7 @@ class GameState:
         If it is possible, returns True and internally notes that the player
         has given away 'n' 'suit's
         """
-        logging.debug("player action: {} gave away {} {}.\n{}".format(player, n, suit, self))
+        logging.info("player action: {} gave away {} {}.\n{}".format(player, n, suit, self))
         self.last_actor = player
 
         if not self.can_have(player, suit, n):
@@ -128,7 +128,7 @@ class GameState:
         Notes that 'player' has received 'n' cards of suit 'suit'. This action
         cannot fail. Returns True.
         """
-        logging.debug("player action: {} received {} {}.\n{}".format(player, n, suit, self))
+        logging.info("player action: {} received {} {}.\n{}".format(player, n, suit, self))
 
         self.has_hand_size(player, self.hand_sizes[player] + n)
         self.player_minimums[player][suit] += n
