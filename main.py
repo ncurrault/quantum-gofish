@@ -8,7 +8,7 @@ import logging
 import datetime
 from enum import Enum
 
-from game_state import GameState
+from game_state import *
 
 with open("ignore/token.txt", "r") as f:
     API_TOKEN = f.read().rstrip()
@@ -178,11 +178,7 @@ class Game:
         if not self.state.asked_for(player_idx, suit_idx):
             return "error: game state indicates that {} has at least one {} with probability zero".format(player.name, suit)
 
-        self.state.deduce_extrema()
-        if self.state.is_converged():
-            self.winner = player
-            self.status = GameStatus.GAME_OVER
-        else:
+        if not self.check_win_conditions():
             self.status = GameStatus.AWAITING_RESPONSE
             self.requested_suit = suit
             self.requested_suit_idx = suit_idx
@@ -208,11 +204,7 @@ class Game:
         else:
             return "error: game state indicates that {} has {} \"{}\" with probability zero".format(player.name, n, self.requested_suit)
 
-        self.state.deduce_extrema()
-        if self.state.is_converged():
-            self.winner = player
-            self.status = GameStatus.GAME_OVER
-        else:
+        if not self.check_win_conditions():
             self.status = GameStatus.AWAITING_ASK
             while True:
                 self.asking_player_idx = (self.asking_player_idx + 1) % self.num_players
@@ -220,6 +212,20 @@ class Game:
 
                 if self.state.hand_sizes[self.asking_player_idx] > 0:
                     break # find the next player with a nonempty hand
+
+    def check_win_conditions(self):
+        res = self.state.check_win_conditions()
+        if res:
+            winner = self.players[ res[1] ]
+            if res[0] == WinType.CONVERGED_STATE:
+                self.win_info = "{} won by converging the game state".format(winner)
+            elif res[0] == WinType.ALL_SUIT:
+                suit = self.suit_names[ res[2] ]
+                self.win_info = "{} won by provably obtaining all {}".format(winner, suit)
+            self.status = GameStatus.GAME_OVER
+            return True
+        else:
+            return False
 
     def player_list(self):
         res = "List of players:\n"
@@ -250,7 +256,7 @@ class Game:
         elif self.status == GameStatus.GAME_NOT_STARTED:
             msg = "Waiting on anyone to start the game"
         else:
-            msg = "Game is over. Congratulations, {}!\n\nFinal game state:\n".format(self.winner.name)
+            msg = "Game is over! {}.\n\nFinal game state:\n".format(self.win_info)
             for player_idx, player in enumerate(self.players):
                 msg += player.name + ": "
                 for suit_idx, suit in enumerate(self.suit_names):

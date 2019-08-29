@@ -1,5 +1,9 @@
 import logging
+from enum import Enum
 
+class WinType(Enum):
+    CONVERGED_STATE = 1
+    ALL_SUIT = 2
 
 NUM_PER_SUIT = 4
 class GameState:
@@ -15,6 +19,7 @@ class GameState:
         self.player_minimums = [ [ 0 for _ in range(num_players) ] for _ in range(num_players) ]
         self.player_maximums = [ [ num_players for _ in range(num_players) ] for _ in range(num_players) ]
         self.hand_sizes = [ NUM_PER_SUIT for _ in range(num_players) ]
+        self.last_actor = None
 
     # TODO track the message that lets us know each thing so we can send "proof" of why a move is invalid
     def has_at_least(self, player, suit, n):
@@ -77,9 +82,6 @@ class GameState:
                 self.has_at_most(player, suit, self.hand_sizes[player] - num_known_cards)
                 self.has_at_least(player, suit, self.hand_sizes[player] - num_possible_cards)
 
-    def is_converged(self):
-        return self.player_maximums == self.player_minimums
-
     def asked_for(self, player, suit):
         """
         Note that some player 'player' has asked another for the suit 'suit'.
@@ -90,6 +92,7 @@ class GameState:
         has at least 1 card of suit 'suit'.
         """
         logging.debug("player action: {} asked for {}.\n{}".format(player, suit, self))
+        self.last_actor = player
 
         if not self.can_have(player, suit, 1):
             return False
@@ -110,6 +113,7 @@ class GameState:
         has given away 'n' 'suit's
         """
         logging.debug("player action: {} gave away {} {}.\n{}".format(player, n, suit, self))
+        self.last_actor = player
 
         if not self.can_have(player, suit, n):
             return False
@@ -132,6 +136,16 @@ class GameState:
         self.has_at_most(player, suit, NUM_PER_SUIT)
 
         return True
+
+    def check_win_conditions(self):
+        self.deduce_extrema()
+
+        if self.player_maximums == self.player_minimums:
+            return WinType.CONVERGED_STATE, self.last_actor
+        for player in range(self.num_players):
+            for suit in range(self.num_players):
+                if player_minimums[player][suit] == NUM_PER_SUIT:
+                    return WinType.ALL_SUIT, player, suit
 
     def test_action(self, source, target, suit, n):
         print( self.asked_for(source, suit) and \
