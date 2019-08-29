@@ -109,7 +109,7 @@ class Game:
 
     def player_leave(self, player):
         if self.started:
-            return "cannot join a game that has already started"
+            return "cannot leave a game that has already started"
         elif player not in self.players:
             return "it's not like you were playing..."
         else:
