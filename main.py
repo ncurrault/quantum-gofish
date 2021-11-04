@@ -392,5 +392,8 @@ if __name__ == "__main__":
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
 
-    updater.start_polling()
+    # updater.start_polling()
+    updater.start_webhook(listen="0.0.0.0", port=int(PORT), url_path=API_TOKEN,
+        webhook_url='https://telegram-quantum-go-fish.herokuapp.com/' + API_TOKEN)
+
     updater.idle()
