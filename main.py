@@ -312,7 +312,7 @@ def leave_handler(update, context):
 def start_game_handler(update, context):
     if "game_obj" in context.chat_data:
         context.chat_data["game_obj"].game_start()
-        context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+        context.chat_data["game_obj"].send_blame(context.bot, update.message.chat_id)
     else:
         update.message.reply_text("No game exists in this chat")
 
@@ -332,7 +332,7 @@ def ask_handler(update, context):
         if response:
             update.message.reply_text(response)
         else:
-            context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+            context.chat_data["game_obj"].send_blame(context.bot, update.message.chat_id)
 
 def _claim(update, context, claim):
     if "game_obj" not in context.chat_data:
@@ -344,7 +344,7 @@ def _claim(update, context, claim):
         if response:
             update.message.reply_text(response)
         else:
-            context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+            context.chat_data["game_obj"].send_blame(context.bot, update.message.chat_id)
 
 def have_handler(update, context):
     if len(context.args) != 1:
@@ -357,7 +357,7 @@ def go_fish_handler(update, context):
 
 def blame_handler(update, context):
     if "game_obj" in context.chat_data:
-        context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+        context.chat_data["game_obj"].send_blame(context.bot, update.message.chat_id)
     else:
         update.message.reply_text("No game exists in this chat")
 
