@@ -7,6 +7,7 @@ import random
 import logging
 import datetime
 from enum import Enum
+import os
 
 from game_state import *
 
@@ -332,23 +333,26 @@ def ask_handler(update, context):
         else:
             context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
-
-def have_handler(update, context):
-    if len(context.args) != 1:
-        update.message.reply_text("syntax: /ihave [number]")
-    elif "game_obj" not in context.chat_data:
+def _claim(update, context, claim):
+    if "game_obj" not in context.chat_data:
         update.message.reply_text("No game exists in this chat")
     elif "player_obj" not in context.user_data or context.user_data["player_obj"] not in context.chat_data["game_obj"].players:
         update.message.reply_text("It doesn't look like you're in this game")
     else:
-        response = context.chat_data["game_obj"].respond_to_request(context.user_data["player_obj"], context.args[0])
+        response = context.chat_data["game_obj"].respond_to_request(context.user_data["player_obj"], claim)
         if response:
             update.message.reply_text(response)
         else:
             context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
-# TODO simulate have 0
-#def go_fish_handler(update, context):
+def have_handler(update, context):
+    if len(context.args) != 1:
+        update.message.reply_text("syntax: /ihave [number]")
+    else:
+        _claim(update, context, context.args[0])
+
+def go_fish_handler(update, context):
+    _has(update, context, "0")
 
 def blame_handler(update, context):
     if "game_obj" in context.chat_data:
