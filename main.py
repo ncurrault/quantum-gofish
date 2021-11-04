@@ -2,6 +2,7 @@ import telegram
 from telegram.ext import Updater, CommandHandler, MessageHandler, Filters, \
     InlineQueryHandler
 from telegram.error import TelegramError
+from postgrespersistence import PostgresPersistence
 
 import random
 import logging
@@ -361,7 +362,8 @@ def blame_handler(update, context):
         update.message.reply_text("No game exists in this chat")
 
 if __name__ == "__main__":
-    updater = Updater(token=API_TOKEN)
+    db_persistence = PostgresPersistence(postgres_url=os.environ["DATABASE_URL"])
+    updater = Updater(token=API_TOKEN, persistence=db_persistence)
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(get_static_handler("help"))
