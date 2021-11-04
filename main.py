@@ -10,12 +10,11 @@ from enum import Enum
 
 from game_state import *
 
-with open("ignore/token.txt", "r") as f:
-    API_TOKEN = f.read().rstrip()
+API_TOKEN = os.environ["BOT_TOKEN"]
+USERNAME = os.environ["BOT_USERNAME"]
+DM_URL = "https://t.me/{}".format(USERNAME[1:])
 
-with open("ignore/username.txt", "r") as f:
-    USERNAME = f.read().rstrip()
-    DM_URL = "http://t.me/{}".format(USERNAME)
+PORT = os.environ.get("PORT", 80)
 
 def get_static_handler(command):
     """
@@ -29,37 +28,11 @@ def get_static_handler(command):
     response = f.read()
 
     return CommandHandler(command, \
-        ( lambda bot, update : \
-        bot.send_message(chat_id=update.message.chat.id, text=response) ) )
+        ( lambda update, context : \
+        context.bot.send_message(chat_id=update.message.chat.id, text=response) ) )
 
-# Credit: https://github.com/CaKEandLies/Telegram_Cthulhu/blob/master/cthulhu_game_bot.py#L63
-def feedback_handler(bot, update, args):
-    """
-    Store feedback from users in a text file.
-    """
-    if args and len(args) > 0:
-        feedback = open("ignore/feedback.txt", "a")
-        feedback.write("\n")
-        feedback.write(update.message.from_user.first_name)
-        feedback.write("\n")
-        # Records User ID so that if feature is implemented, can message them
-        # about it.
-        feedback.write(str(update.message.from_user.id))
-        feedback.write("\n")
-        feedback.write(" ".join(args))
-        feedback.write("\n")
-        feedback.close()
-        bot.send_message(chat_id=update.message.chat_id,
-                         text="Thanks for the feedback!")
-    else:
-        bot.send_message(chat_id=update.message.chat_id,
-                         text="Format: /feedback [feedback]")
-
-def handle_error(bot, update, error):
-    try:
-        raise error
-    except TelegramError:
-        logging.getLogger(__name__).warning('TelegramError! %s caused by this update:\n%s', error, update)
+def handle_error(update, context):
+    logging.getLogger(__name__).warning('Error %s caused by this update:\n%s', context.error, update)
 
 class Player:
     """
@@ -265,38 +238,38 @@ class Game:
 
         bot.send_message(chat_id=chat_id, text=msg, parse_mode=telegram.ParseMode.MARKDOWN)
 
-def newgame_handler(bot, update, chat_data):
-    chat_data["game_obj"] = Game()
+def newgame_handler(update, context):
+    context.chat_data["game_obj"] = Game()
     update.message.reply_text("Started new Quantum Go Fish game! /joingame to join")
 
 # Telegram handlers for inquiries about players/nicknames
 
-def i_am_handler(bot, update, user_data, args):
-    if args:
-        nickname = args[0]
-        if "player_obj" in user_data:
-            user_data["player_obj"].set_nickname(nickname)
+def i_am_handler(update, context):
+    if context.args:
+        nickname = context.args[0]
+        if "player_obj" in context.user_data:
+            context.user_data["player_obj"].set_nickname(nickname)
         else:
-            user_data["player_obj"] = Player(update.message.from_user.id, nickname)
+            context.user_data["player_obj"] = Player(update.message.from_user.id, nickname)
 
         update.message.reply_text("Successfully changed nickname to: " + nickname)
     else:
         update.message.reply_text("Nickname required")
 
-def list_player_handler(bot, update, chat_data):
-    if "game_obj" in chat_data:
-        update.message.reply_text(chat_data["game_obj"].player_list())
+def list_player_handler(update, context):
+    if "game_obj" in context.chat_data:
+        update.message.reply_text(context.chat_data["game_obj"].player_list())
     else:
         update.message.reply_text("No game exists in this chat")
 
-def whois_handler(bot, update, args, chat_data):
-    if "game_obj" not in chat_data:
+def whois_handler(update, context):
+    if "game_obj" not in context.chat_data:
         update.message.reply_text("No game exists in this chat")
-    elif not args:
+    elif not context.args:
         update.message.reply_text("usage: /whois [nickname or index]")
     else:
-        nickname = " ".join(args)
-        res = chat_data["game_obj"].get_player_md_tag(nickname)
+        nickname = " ".join(context.args)
+        res = context.chat_data["game_obj"].get_player_md_tag(nickname)
         if res:
             update.message.reply_text(res, parse_mode=telegram.ParseMode.MARKDOWN)
         else:
@@ -304,13 +277,13 @@ def whois_handler(bot, update, args, chat_data):
 
 # Telegram handlers for game management actions (joining/leaving the lobby, starting)
 # TODO shouldn't need... (see comment below)
-def join_handler(bot, update, user_data, chat_data):
-    if "game_obj" in chat_data:
-        if "player_obj" not in user_data:
-            user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
+def join_handler(update, context):
+    if "game_obj" in context.chat_data:
+        if "player_obj" not in context.user_data:
+            context.user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
 
-        player = user_data["player_obj"]
-        game = chat_data["game_obj"]
+        player = context.user_data["player_obj"]
+        game = context.chat_data["game_obj"]
         msg = game.player_join(player)
         if msg:
             update.message.reply_text(msg)
@@ -319,13 +292,13 @@ def join_handler(bot, update, user_data, chat_data):
     else:
         update.message.reply_text("No game exists in this chat")
 
-def leave_handler(bot, update, user_data, chat_data):
-    if "game_obj" in chat_data:
-        if "player_obj" not in user_data:
-            user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
+def leave_handler(update, context):
+    if "game_obj" in context.chat_data:
+        if "player_obj" not in context.user_data:
+            context.user_data["player_obj"] = Player(update.message.from_user.id, update.message.from_user.first_name)
 
-        player = user_data["player_obj"]
-        game = chat_data["game_obj"]
+        player = context.user_data["player_obj"]
+        game = context.chat_data["game_obj"]
         msg = game.player_leave(player)
         if msg:
             update.message.reply_text(msg)
@@ -334,53 +307,52 @@ def leave_handler(bot, update, user_data, chat_data):
     else:
         update.message.reply_text("No game exists in this chat")
 
-def start_game_handler(bot, update, chat_data):
-    if "game_obj" in chat_data:
-        chat_data["game_obj"].game_start()
-        chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+def start_game_handler(update, context):
+    if "game_obj" in context.chat_data:
+        context.chat_data["game_obj"].game_start()
+        context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
     else:
         update.message.reply_text("No game exists in this chat")
 
 # Telegram handlers for in-game actions: asking another user for something,
 # responding with how many you have, or /go fish (equivalent to "/ihave 0")
 
-def ask_handler(bot, update, user_data, chat_data, args):
-    if len(args) < 2:
+def ask_handler(update, context):
+    if len(context.args) < 2:
         update.message.reply_text("syntax: /ask [user] [suit name]")
-    elif "game_obj" not in chat_data:
+    elif "game_obj" not in context.chat_data:
         update.message.reply_text("No game exists in this chat")
-    elif "player_obj" not in user_data or user_data["player_obj"] not in chat_data["game_obj"].players:
+    elif "player_obj" not in context.user_data or context.user_data["player_obj"] not in context.chat_data["game_obj"].players:
         update.message.reply_text("It doesn't look like you're in this game")
     else:
-        response = chat_data["game_obj"].ask_for(user_data["player_obj"], args[0], " ".join(args[1:]))
+        response = context.chat_data["game_obj"].ask_for(context.user_data["player_obj"], context.args[0], " ".join(context.args[1:]))
 
         if response:
             update.message.reply_text(response)
         else:
-            chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+            context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
 
-def have_handler(bot, update, user_data, chat_data, args):
-    if len(args) != 1:
+def have_handler(update, context):
+    if len(context.args) != 1:
         update.message.reply_text("syntax: /ihave [number]")
-    elif "game_obj" not in chat_data:
+    elif "game_obj" not in context.chat_data:
         update.message.reply_text("No game exists in this chat")
-    elif "player_obj" not in user_data or user_data["player_obj"] not in chat_data["game_obj"].players:
+    elif "player_obj" not in context.user_data or context.user_data["player_obj"] not in context.chat_data["game_obj"].players:
         update.message.reply_text("It doesn't look like you're in this game")
     else:
-        response = chat_data["game_obj"].respond_to_request(user_data["player_obj"], args[0])
+        response = context.chat_data["game_obj"].respond_to_request(context.user_data["player_obj"], context.args[0])
         if response:
             update.message.reply_text(response)
         else:
-            chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+            context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
 
-def go_fish_handler(bot, update, user_data, chat_data):
-    have_handler(bot, update, user_data=user_data, chat_data=chat_data,
-        args=["0"])
+# TODO simulate have 0
+#def go_fish_handler(update, context):
 
-def blame_handler(bot, update, chat_data):
-    if "game_obj" in chat_data:
-        chat_data["game_obj"].send_blame(bot, update.message.chat_id)
+def blame_handler(update, context):
+    if "game_obj" in context.chat_data:
+        context.chat_data["game_obj"].send_blame(bot, update.message.chat_id)
     else:
         update.message.reply_text("No game exists in this chat")
 
@@ -389,29 +361,28 @@ if __name__ == "__main__":
     dispatcher = updater.dispatcher
 
     dispatcher.add_handler(get_static_handler("help"))
-    dispatcher.add_handler(CommandHandler('feedback', feedback_handler, pass_args=True))
+    dispatcher.add_handler(get_static_handler("feedback"))
 
-    dispatcher.add_handler(CommandHandler('newgame', newgame_handler, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('listplayers', list_player_handler, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('whois', whois_handler, pass_args=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('iam', i_am_handler, pass_args=True, pass_user_data=True))
+    dispatcher.add_handler(CommandHandler('newgame', newgame_handler))
+    dispatcher.add_handler(CommandHandler('listplayers', list_player_handler))
+    dispatcher.add_handler(CommandHandler('whois', whois_handler))
+    dispatcher.add_handler(CommandHandler('iam', i_am_handler))
 
     # TODO these 2 commands shouldn't be necessary: you should be able to just start a game, then whoever asks first
     # is in it, as well as whoever they ask. but GameState currently does not support this
-    dispatcher.add_handler(CommandHandler('joingame', join_handler, pass_user_data=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('leavegame', leave_handler, pass_user_data=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('startgame', start_game_handler, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('joingame', join_handler))
+    dispatcher.add_handler(CommandHandler('leavegame', leave_handler))
+    dispatcher.add_handler(CommandHandler('startgame', start_game_handler))
 
-    dispatcher.add_handler(CommandHandler('ask', ask_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('ihave', have_handler, pass_args=True, pass_user_data=True, pass_chat_data=True))
-    dispatcher.add_handler(CommandHandler('gofish', go_fish_handler, pass_user_data=True, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('ask', ask_handler))
+    dispatcher.add_handler(CommandHandler('ihave', have_handler))
+    dispatcher.add_handler(CommandHandler('gofish', go_fish_handler))
 
-    dispatcher.add_handler(CommandHandler('blame', blame_handler, pass_chat_data=True))
+    dispatcher.add_handler(CommandHandler('blame', blame_handler))
 
     dispatcher.add_error_handler(handle_error)
 
     logging.basicConfig(
-        filename="ignore/bot.log",
         format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
         level=logging.INFO)
 
